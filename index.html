@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Asteroids!!!</title>
+<!-- Peter Ngo-Ly 991506266 -->
+
+<!-- Welcome to ZIM at http://zimjs.com - Code Interactive Media Pizzazz! 	        -->
+<!-- ZIM runs on the HTML Canvas powered by JavaScript and CreateJS http://createjs.com -->
+<!-- Founded by Inventor Dan Zen - http://danzen.com - Canadian New Media Award Winner 	-->
+<!-- ZIM is free to use. You can donate to help improve ZIM at http://zimjs.com/donate 	-->
+
+<script src="http://d309knd7es5f10.cloudfront.net/createjs_1.1_min.js"></script>
+<script>
+	var zon = true; // set to false to turn off console messages from zim
+	var zns = false; // set to true to require zim namespace - eg. new zim.Frame()
+</script>
+<script src="https://d309knd7es5f10.cloudfront.net/zim_6.9.0.js"></script>
+<!-- use zimjs.com/distill for minified individual functions! -->
+
+<script>
+
+// SCALING OPTIONS
+// scaling can have values as follows with full being the default
+// "fit"	sets canvas and stage to dimensions and scales to fit inside window size
+// "outside"	sets canvas and stage to dimensions and scales to fit outside window size
+// "full"	sets stage to window size with no scaling
+// "tagID"	add canvas to HTML tag of ID - set to dimensions if provided - no scaling
+
+var scaling = "fit"; // this will resize to fit inside the screen dimensions
+var width = 1024;
+var height = 768;
+
+// as of ZIM 5.5.0 you do not need to put zim before ZIM functions and classes
+var frame = new Frame(scaling, width, height);
+frame.on("ready", function() {
+    zog("ready from ZIM Frame"); // logs in console (F12 - choose console)
+
+    var stage = frame.stage;
+    var stageW = frame.width;
+    var stageH = frame.height;
+    frame.outerColor = "#333";
+    frame.color = "#000";
+
+
+    var asteroidsAssets = []; 
+	//declare an array called asteroidsAssets
+
+	loop(6, function(i) {
+		asteroidsAssets.push("a" + i + ".png");
+	});
+    zog(asteroidsAssets);
+	//loop and store asteroids in asteroidsAssets array
+
+	var assets = ["pod.png", "boom.png", "boom.mp3", "rocket.png", "bg1.jpg", "hanks.mp3"];
+	assets = assets.concat(asteroidsAssets);
+	// declare an array called assets and store assets in the array
+
+    frame.loadAssets(assets, "assets/");
+	
+
+    
+	frame.on("complete", function() {
+
+		var background =frame.asset("bg1.jpg")
+			.sca(1)
+			.addTo(stage); //add space background
+		
+		var counter = 0;
+		//declare an variable called counter with value of 0, going to use this to keep score
+		
+		var asteroids = new Container().addTo();
+
+		interval({min:1000, max:4000}, function() {
+			
+			var margin = 200;
+			var data = [
+				[rand(stageW),-margin,rand(stageW),stageH+margin],
+				[stageW+margin,rand(stageH),-margin,rand(stageH)],
+				[rand(stageW),stageH+margin,rand(stageW),-margin],
+				[-margin,rand(stageH),stageW+margin,rand(stageH)]
+			]
+			//store parameter for asteroids in and out of stage
+			
+			var location = shuffle(data)[0];
+			//declare a variable called location and store a random array from data
+			
+			var asteroid = frame.asset(shuffle(asteroidsAssets)[0]) //declare a variable called asteroid with a random asteroid
+				.clone()
+				.sca(rand(.5, 1))
+				.centerReg(asteroids)
+				.pos(location[0], location[1]) //starting location of asteroid
+				.animate({
+					obj:{rotation:360*(rand()>.5?-1:1)}, // ternary operator
+					time:rand(3000, 6000),
+					loop:true,
+					ease:"linear"
+				}) // make it rotate
+				.animate({
+					override:false,
+					obj:{x:location[2], y:location[3]},
+					time:rand(6000, 12000),
+					ease:"linear"
+				})
+
+			stage.update();
+
+		}, null, true); // end of interval
+
+
+
+		asteroids.on("mousedown", function(e) {
+			var explosion = new Sprite(frame.asset("boom.png"), 8, 6)//load sprite
+				.centerReg()
+				.sca(2)
+				.pos(e.target.x, e.target.y) //e.target is what was clicked on
+				.run(1000);
+			frame.asset("boom.mp3").play(); //play sound
+			counter++; //increment the counter for asteroid destroyed
+			zog("asteroids destroyed: " + counter);									
+			e.target.removeFrom(); // e.target is what was clicked on
+			score.text="SCORE: " + counter; //update the score
+			stage.update();
+		});
+
+	
+		
+
+		var pod = frame.asset("rocket.png")
+			.sca(.11)
+			.centerReg();
+		
+		pod.cursor="pointer"; // add pointer to rocket
+					
+		pod.on("mousedown", function() {
+			frame.asset("hanks.mp3").play(); //add sounds when you click on rocket
+			pod.animate({rotation:"360", ease:"linear"}, 2000); //spin the rocket when you click on it
+			zog("talking");
+		});
+				
+		var score = new zim.Label({text:"SCORE: " + counter, size: 40, font: "Comic Sans MS", color:frame.yellow, rollColor:frame.yellow})
+			.expand()
+			.addTo(stage)
+			.pos(25, 25); //add a score count for how many asteroids are destroyed		
+
+		Ticker.add(function() {
+			asteroids.loop(function(asteroid) {
+				if (asteroid.hitTestCircle(pod)) { //add ticker for asteroids to check if asteroid hits rocket
+					pod.removeFrom(); //remove rocket from stage
+					asteroids.removeFrom(); //remove asteroids from stage			
+					zog("hitting");
+					var explosion = new Sprite(frame.asset("boom.png"), 8, 6) //load explosion
+						.centerReg()
+						.sca(2)
+						.pos(pod.x, pod.y)
+						.run(4000);
+					frame.asset("boom.mp3").play(); // play sound 
+					
+					var label = new Label({
+					   text:"RETRY",
+					   size:20,
+					   font:"Comic Sans MS",
+					   color:"#F9F9F9",
+					   fontOptions:"bold"
+					}); //add custom label font, size, colour for button
+					
+					var retry = new Button({
+					   label:label,
+					   width:110,
+					   height:55,
+					   color:"#062743",
+					   rollColor:"#113A5D",
+					   borderWidth:4,
+					   borderColor:"#C4FFDD",
+					   gradient:.5,
+					   corner:0
+					})
+					.center(stage)
+					.mov(0); //add a button with the label
+					retry.on("click", function() {zgo("index.html")}); //on click button that restarts the game									
+				}
+			})
+		}); // end of Ticker
+
+		new MotionController(stage, pod, "keydown");
+		//add control to move the rocket on the stage
+
+        stage.update(); // this is needed to show any changes
+
+    }); // end of assets complete
+
+}); // end of ready
+
+</script>
+
+<meta name="viewport" content="width=device-width, user-scalable=no" />
+
+</head>
+
+<body>
+<!-- canvas with id="myCanvas" is made by zim Frame -->
+</body>
+</html>
